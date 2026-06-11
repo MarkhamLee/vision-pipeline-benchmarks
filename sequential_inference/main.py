@@ -3,26 +3,27 @@
 # Entrypoint for the sequential inference pipeline.
 # Loads config, initialises clients, runs the orchestrator,
 # and saves a timestamped config snapshot to reports/.
-
 import os
+
 import sys
 import shutil
 import yaml
 from datetime import datetime
 from pathlib import Path
+from orchestrator import SequentialOrchestrator  # noqa: E402
 
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
 from utils.logging_utils import console_logging  # noqa: E402
 from video_processing.video_source import VideoSource  # noqa: E402
-from utils.data_clients import InfluxClient, PostgresClient  # noqa: E402
-from orchestrator import SequentialOrchestrator  # noqa: E402
+from data_utils.data_clients import InfluxClient, PostgresClient  # noqa: E402
+
 
 logger = console_logging('sequential-main')
 
-CONFIG_PATH = 'config/pipeline_config.yaml'
-REPORTS_DIR = Path('reports')
+CONFIG_PATH = '../config/pipeline_config_prod.yaml'
+REPORTS_DIR = Path('../reports')
 
 
 def load_config(path: str = CONFIG_PATH) -> dict:
@@ -45,7 +46,19 @@ def save_config_snapshot(source_path: str = CONFIG_PATH) -> None:
 
 
 def main():
+
     config = load_config()
+
+    raw_path = config["source"]["path"]
+    p = Path(raw_path)
+
+    print("cwd:", os.getcwd())
+    print("raw_path:", raw_path)
+    print("absolute:", p.resolve())
+    print("exists:", p.exists())
+    print("is_dir:", p.is_dir())
+    print("is_file:", p.is_file())
+    print("source_type:", config["source"]["type"])
 
     # Save a config snapshot before the run starts
     save_config_snapshot()
@@ -58,13 +71,15 @@ def main():
     )
     influx_bucket = os.environ['INFLUX_BUCKET']
 
+    pipeline_cfg = config.get('pipeline', {})
+
     # PostgreSQL
     pg_conninfo = (
         f"host={os.environ['PG_HOST']} "
         f"port={os.environ.get('PG_PORT', '5432')} "
-        f"dbname={os.environ['PG_DB']} "
-        f"user={os.environ['PG_USER']} "
-        f"password={os.environ['PG_PASSWORD']}"
+        f"dbname={pipeline_cfg.get('postgres_table')} "
+        f"user={os.environ['VISION_PIPELINE_PG_USER']} "
+        f"password={os.environ['VISION_PIPELINE_PG_PASSWORD']}"
     )
     pg_pool = PostgresClient.postgres_client(pg_conninfo)
 

@@ -4,12 +4,18 @@
 # Runs two YOLO models one after the other per frame, each scoped
 # to a single class via config. Telemetry goes to InfluxDB;
 # per-interval detection counts go to PostgreSQL.
+import os
+import sys
 import time
 from collections import defaultdict
-from base_orchestrator import BaseOrchestrator
-from models.model_loader import CudaYoloLoader
-from utils.data_clients import InfluxClient, PostgresClient
-from utils.logging_utils import console_logging
+
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+from base_orchestrator import BaseOrchestrator  # noqa: E402
+from models.model_loader import CudaYoloLoader  # noqa: E402
+from data_utils.data_clients import InfluxClient, PostgresClient  # noqa: E402
+from utils.logging_utils import console_logging  # noqa: E402
 
 logger = console_logging('sequential-orchestrator')
 
@@ -42,11 +48,9 @@ class SequentialOrchestrator(BaseOrchestrator):
         # Config uses model1_class_number / model2_class_number (integers)
         self.model1_class = pipeline_cfg.get('model1_class_number')
         self.model1_class_name = pipeline_cfg.\
-            get('model1_class_names',
-                'model1')
-        self.model2_class = pipeline_cfg.get('model2_class')
-        self.model2_class_name = pipeline_cfg.get('model2_class_name'
-                                                  'model2')
+            get('model1_class_name')
+        self.model2_class = pipeline_cfg.get('model2_class_number')
+        self.model2_class_name = pipeline_cfg.get('model2_class_name')
 
         # Pipeline-level config
         self.source_id = config['source'].get('source_id', 'unknown')
@@ -60,14 +64,18 @@ class SequentialOrchestrator(BaseOrchestrator):
             'postgres_table', 'sequential_analytics_data'
         )
 
-        # Load models via the hardware-aware loader
+        # Load models via an external loader
+        # this enables us to have a variety of loaders for various
+        # hw without altering the main pipeline code beyond pointing
+        # to a specific loader. <-- need to make the HW loader configurable
+        # in the future
         self.model1 = model_loader.load_yolo_model(self.model1_path)
         self.model2 = model_loader.load_yolo_model(self.model2_path)
         logger.info('Models loaded: %s | %s',
                     self.model1_path,
                     self.model2_path)
 
-        # InfluxDB base payload — measurement name now comes from config
+        # InfluxDB base payload — measurement name comes from config
         self.influx_base = {
             "measurement": self.influx_measurement,
             "tags": {

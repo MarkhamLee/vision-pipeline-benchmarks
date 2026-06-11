@@ -139,7 +139,7 @@ class PostgresClient():
         narration is optional — pass None for count-only writes.
         """
         sql = """
-            INSERT INTO detection_results
+            INSERT INTO vision_pipeline_benchmark_analytics
                 (source_id, model1_class, model1_count,
                  model2_class, model2_count, narration)
             VALUES (%s, %s, %s, %s, %s, %s)
@@ -164,7 +164,7 @@ class PostgresClient():
         Use in the async pipeline.
         """
         sql = """
-            INSERT INTO detection_results
+            INSERT INTO vision_pipeline_benchmark_analytics
                 (source_id, model1_class, model1_count,
                  model2_class, model2_count, narration)
             VALUES (%s, %s, %s, %s, %s, %s)

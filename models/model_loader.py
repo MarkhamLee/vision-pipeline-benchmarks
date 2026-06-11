@@ -10,6 +10,9 @@ from utils.logging_utils import console_logging
 
 logger = console_logging('model_loader')
 
+# separate class for each type of model loader
+# e.g., separate class for an RKNN loader
+
 
 class CudaYoloLoader:
 
