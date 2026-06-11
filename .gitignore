@@ -224,3 +224,5 @@ __marimo__/
 config/pipeline_config_prod.yaml
 
 reports/*
+
+*.mp4
