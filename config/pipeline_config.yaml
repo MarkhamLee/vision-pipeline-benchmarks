@@ -1,17 +1,17 @@
-pipeline_config
+# Sample
 # Pipeline configuration for vision-pipeline-benchmarks
 # Adjust model paths, source, and flush interval as needed.
 
 source:
-  type: folder                          # 'folder' or 'rtsp'
-  path: /path/to/videos                 # used when type=folder
-  rtsp_url: rtsp://user:pass@host/path  # used when type=rtsp
+  type: folder                                        # 'folder' or 'rtsp'
+  path: test_videos/13912687_1080_1920_30fps.mp4      # used when type=folder
+  rtsp_url: rtsp://user:pass@host/path                # used when type=rtsp
   rtsp_limit_seconds: 300
-  source_id: vancouver-test-01          # identifier written to Postgres
+  source_id: sequential_test_run2_test_load                     # identifier written to Postgres
 
 pipeline:
 
-  # model one config: 
+  # model one config 
   model1_path: models/yolov8m.pt           # first model (e.g. lightweight)
   model_name: "fine-tuned-car-model_v1"    # Allows us to track model versions
   model_type: "detection"                     
@@ -35,14 +35,10 @@ pipeline:
 
 
   # data saving loading config
-  influx_db_measurement: ""sequential-test1_telemetry"
+  influx_db_measurement: "sequential-test1_telemetry"
   postgres_table: "sequential_test1_analytics"
 
 video_config:
 
   # RTSP config
   RTSP_LENGTH: 1200  # in seconds
-  
-
-  # Video Path 
-  VIDEO_FOLDER: ""
