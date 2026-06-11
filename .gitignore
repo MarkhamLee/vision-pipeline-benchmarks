@@ -219,3 +219,8 @@ __marimo__/
 
 # GitHub Related
 .vscode/
+
+# Config files
+config/pipeline_config_prod.yaml
+
+reports/*
