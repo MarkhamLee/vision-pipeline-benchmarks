@@ -18,13 +18,13 @@ CREATE TABLE IF NOT EXISTS vision_pipeline_benchmark_analytics (
 
 -- Filter all rows for a given source across multi-day runs
 CREATE INDEX IF NOT EXISTS idx_seq_analytics_source_id
-    ON sequential_test1_analytics (source_id);
+    ON vision_pipeline_benchmark_analytics (source_id);
 
 -- Time-range queries scoped to a source (most common query pattern)
 CREATE INDEX IF NOT EXISTS idx_seq_analytics_source_time
-    ON sequential_test1_analytics (source_id, recorded_at DESC);
+    ON vision_pipeline_benchmark_analytics (source_id, recorded_at DESC);
 
 -- Efficiently retrieve only rows that have narration
 CREATE INDEX IF NOT EXISTS idx_seq_analytics_narration
-    ON sequential_test1_analytics (recorded_at DESC)
-    WHERE narration IS NOT NULL;
+    ON vision_pipeline_benchmark_analytics (recorded_at DESC)
+    WHERE narration IS NOT NULL
