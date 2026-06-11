@@ -1,4 +1,4 @@
-# Sample
+# Example pipeline config file
 # Pipeline configuration for vision-pipeline-benchmarks
 # Adjust model paths, source, and flush interval as needed.
 
@@ -34,9 +34,9 @@ pipeline:
   flush_interval_seconds: 60            # how often to write summary to DBs
 
 
-  # data saving loading config
+  # data saving config
   influx_db_measurement: "sequential-test1_telemetry"
-  postgres_table: "sequential_test1_analytics"
+  postgres_table: "sequential_inference_analytics"
 
 video_config:
 
