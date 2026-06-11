@@ -4,7 +4,7 @@
 
 source:
   type: folder                                        # 'folder' or 'rtsp'
-  path: test_videos/13912687_1080_1920_30fps.mp4      # used when type=folder
+  path: ../video_processing/test_videos      # used when type=folder
   rtsp_url: rtsp://user:pass@host/path                # used when type=rtsp
   rtsp_limit_seconds: 300
   source_id: sequential_test_run2_test_load                     # identifier written to Postgres
@@ -18,7 +18,7 @@ pipeline:
   model_mode: "detect"                     # Can pass modes like detect vs track as a parameter
   model1_confidence: 0.4
   model1_class_number: 0 
-  model1_class_names: "Person"
+  model1_class_name: "Person"
 
  
   # model two config
@@ -27,7 +27,7 @@ pipeline:
   model_type: "detection"
   model_mode: "detect"
   model2_confidence: 0.4
-  model2_class: 2
+  model2_class_number: 2
   model2_class_name: "Car"
   
   # general config
