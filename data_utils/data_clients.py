@@ -105,8 +105,9 @@ class PostgresClient:
         pool = await PostgresClient.postgres_client_async(conninfo)
         """
         try:
-            pool = AsyncConnectionPool(conninfo)
+            pool = AsyncConnectionPool(conninfo, open=False)
             await pool.open()
+            await pool.wait()
             logger.\
                 info('PostgreSQL async connection pool created successfully')
             return pool
