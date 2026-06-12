@@ -3,12 +3,13 @@
 This repo contains benchmarking tools for use in optimizing multi-modal computer vision inference pipelines. You can try different approaches (sequential vs async), swap models in and out and get a report of how fast the pipeline ran.  The goal is to build a tool that makes pipeline benchmarking quick and easy. 
 
 
+
 For computer vision projects deployed at the edge the key constraints are often:
 * **Time:** You are monitoring real‑world events and need to deliver alerts or results to people who can react to emergencies and other issues detected by cameras. 
 * **Hardware:** You may be running on low‑power devices, or you need to run ML models on several video streams in parallel.
 * **Economics:** vision AI product feasibility often comes down to how well you optimize time and hardware usage, which drives unit economics and customer adoption.
 
-The tools in this repo are based on the approaches, "one off tools" and the like I've built in the past to optimize around the above parameters. 
+The tools in this repo are based on the approaches, "one off tools" and the like I've built in the past to optimize around the above parameters. For the moment the benchmarks are built around the YOLO computer vision models from [Ultralytics](https://github.com/ultralytics/ultralytics) running on NVIDIA GPUs, but they will be expanded to support other models and hardware in the future. 
 
 ### How does it work?
 
