@@ -16,6 +16,7 @@ from base_orchestrator import BaseOrchestrator  # noqa: E402
 from models.model_loader import CudaYoloLoader  # noqa: E402
 from data_utils.data_clients import InfluxClient, PostgresClient  # noqa: E402
 from utils.logging_utils import console_logging  # noqa: E402
+from utils.pipeline_utils import send_slack_webhook_basic  # noqa: E402
 
 logger = console_logging('sequential-orchestrator')
 
@@ -29,12 +30,14 @@ class SequentialOrchestrator(BaseOrchestrator):
                  config: dict,
                  influx_client,
                  influx_bucket: str,
-                 pg_pool) -> None:
+                 pg_pool,
+                 slack_webhook: str) -> None:
 
         self.config = config
         self.influx_client = influx_client
         self.influx_bucket = influx_bucket
         self.pg_pool = pg_pool
+        self.slack_pipeline_completion_webhook = slack_webhook
 
         pipeline_cfg = config.get('pipeline', {})
 
@@ -99,6 +102,8 @@ class SequentialOrchestrator(BaseOrchestrator):
         logger.info('Sequential pipeline started | source_id=%s',
                     self.source_id)
 
+        start = time.perf_counter()
+
         for frame in source.frames():
             t_frame_start = time.perf_counter()
 
@@ -143,8 +148,13 @@ class SequentialOrchestrator(BaseOrchestrator):
         if frame_times:
             self._flush(frame_times, counts_m1, counts_m2, elapsed)
 
-        logger.info('Sequential pipeline complete | total frames: %d',
-                    frame_count)
+        duration = round((time.perf_counter() - start)/60, 2)
+
+        pipeline_completion_message = (f'Sequential pipeline with run ID: {self.source_id}, completed in {duration} minutes | total frames: {frame_count}')  # noqa: E501
+
+        logger.info(pipeline_completion_message)
+        send_slack_webhook_basic(self.slack_pipeline_completion_webhook,
+                                 pipeline_completion_message)
 
     def _extract_count(self, results) -> int:
         """Returns total detection count from a YOLO results object.
@@ -180,6 +190,7 @@ class SequentialOrchestrator(BaseOrchestrator):
 
         # PostgreSQL: counts — table name comes from config
         PostgresClient.write_detection_data(
+            table_name=self.postgres_table,
             pool=self.pg_pool,
             source_id=self.source_id,
             model1_class=self.model1_class_name,

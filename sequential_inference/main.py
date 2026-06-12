@@ -49,19 +49,11 @@ def main():
 
     config = load_config()
 
-    raw_path = config["source"]["path"]
-    p = Path(raw_path)
-
-    print("cwd:", os.getcwd())
-    print("raw_path:", raw_path)
-    print("absolute:", p.resolve())
-    print("exists:", p.exists())
-    print("is_dir:", p.is_dir())
-    print("is_file:", p.is_file())
-    print("source_type:", config["source"]["type"])
-
     # Save a config snapshot before the run starts
     save_config_snapshot()
+
+    # get Slack webhook for pipeline completion notifications
+    SLACK_WEBHOOK = os.environ['VISION_PIPELINE_COMPLETION_WEBHOOK']
 
     # InfluxDB config
     influx_client = InfluxClient.influx_client(
@@ -91,7 +83,8 @@ def main():
         config=config,
         influx_client=influx_client,
         influx_bucket=influx_bucket,
-        pg_pool=pg_pool
+        pg_pool=pg_pool,
+        slack_webhook=SLACK_WEBHOOK
     )
 
     try:
