@@ -1,0 +1,39 @@
+# Async pipeline configuration for vision-pipeline-benchmarks
+
+source:
+  type: folder
+  path: ../video_processing/test_videos
+  rtsp_url: rtsp://user:pass@host/path
+  rtsp_limit_seconds: 300
+  source_id: async_test_run2
+
+pipeline:
+  model1_path: models/yolov8m.pt
+  model1_name: "fine-tuned-car-model_v1"
+  model1_confidence: 0.4
+  model1_class_number: 0
+  model1_class_name: "Person"
+
+  model2_path: models/yolov8m.pt
+  model2_name: "fine-tuned-people-model_v1"
+  model2_confidence: 0.4
+  model2_class_number: 2
+  model2_class_name: "Car"
+
+  flush_interval_seconds: 5
+  flush_timeout_seconds: 10
+  frame_queue_size: 64
+  result_queue_size: 256
+  
+  # database configs 
+  influx_db_measurement: "async-test1_telemetry"
+  postgres_database: "vision_pipeline_benchmark_analytics"
+  postgres_table: "async_benchmark_analytics_data" 
+
+telemetry:
+  hardware_label: "NVIDIA 4060 mobile"
+  pipeline_label: "async"
+  site_label: "local-dev"
+
+video_config:
+  RTSP_LENGTH: 1200
