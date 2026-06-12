@@ -3,6 +3,7 @@
 # data engineering platform for my private cloud:
 # Internet & IoT Data Platform
 # https://github.com/MarkhamLee/internet-and-iot-data-platform
+import os
 import requests
 from utils.logging_utils import console_logging
 
@@ -72,3 +73,9 @@ def validate_webhook(webhook_url: str) -> bool:
         return r.text.strip() == "ok"
     except requests.RequestException:
         return False
+
+
+def validate_env(required_vars) -> None:
+    missing = [name for name in required_vars if not os.environ.get(name)]
+    if missing:
+        raise EnvironmentError(f'Missing required environment variables: {", ".join(missing)}')  # noqa: E501
