@@ -39,6 +39,11 @@ pipeline:
   postgres_database: "vision_pipeline_benchmark_analytics"
   postgres_table: "sequential_benchmark_analytics_data"
 
+telemetry:
+  hardware_label: "NVIDIA 4060 mobile"
+  pipeline_label: "async"
+  site_label: "local-dev"
+
 video_config:
 
   # RTSP config

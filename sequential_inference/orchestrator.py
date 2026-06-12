@@ -67,6 +67,10 @@ class SequentialOrchestrator(BaseOrchestrator):
             'postgres_table', 'sequential_analytics_data'
         )
 
+        # Hardware Data
+        hardware_data = config.get('telemetry', {})
+        self.hardware = hardware_data['hardware_label']
+
         # Load models via an external loader
         # this enables us to have a variety of loaders for various
         # hw without altering the main pipeline code beyond pointing
@@ -85,7 +89,8 @@ class SequentialOrchestrator(BaseOrchestrator):
                 "pipeline": "sequential",
                 "source_id": self.source_id,
                 "model1": self.model1_path,
-                "model2": self.model2_path
+                "model2": self.model2_path,
+                "hardware": self.hardware,
             }
         }
 
@@ -179,7 +184,8 @@ class SequentialOrchestrator(BaseOrchestrator):
             "avg_frame_latency_ms": round(avg_latency_ms, 3),
             f"avg_{self.model1_class_name}_count": avg_m1,
             f"avg_{self.model2_class_name}_count": avg_m2,
-            "frame_count": len(frame_times)
+            "frame_count": len(frame_times),
+            "hardware": self.hardware,
         }
         InfluxClient.write_influx_data(
             self.influx_client,

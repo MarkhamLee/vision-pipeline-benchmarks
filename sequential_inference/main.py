@@ -45,6 +45,16 @@ def save_config_snapshot(source_path: str = CONFIG_PATH) -> None:
     logger.info('Config snapshot saved: %s', dest)
 
 
+def build_pg_conninfo(db_name: str) -> str:
+    return (
+        f"host={os.environ['PG_HOST']} "
+        f"port={os.environ.get('PG_PORT', '5432')} "
+        f"dbname={db_name} "
+        f"user={os.environ['VISION_PIPELINE_PG_USER']} "
+        f"password={os.environ['VISION_PIPELINE_PG_PASSWORD']}"
+    )
+
+
 def main():
 
     config = load_config()
@@ -64,15 +74,12 @@ def main():
     influx_bucket = os.environ['INFLUX_BUCKET']
 
     pipeline_cfg = config.get('pipeline', {})
+    db_name = pipeline_cfg.get('postgres_database')
+    if not db_name:
+        raise ValueError("Missing required config key: pipeline.postgres_database")  # noqa: E501
 
     # PostgreSQL
-    pg_conninfo = (
-        f"host={os.environ['PG_HOST']} "
-        f"port={os.environ.get('PG_PORT', '5432')} "
-        f"dbname={pipeline_cfg.get('postgres_database')} "
-        f"user={os.environ['VISION_PIPELINE_PG_USER']} "
-        f"password={os.environ['VISION_PIPELINE_PG_PASSWORD']}"
-    )
+    pg_conninfo = build_pg_conninfo(db_name)
     pg_pool = PostgresClient.postgres_client(pg_conninfo)
 
     # Video source
