@@ -7,12 +7,12 @@ source:
   path: ../video_processing/test_videos      # used when type=folder
   rtsp_url: rtsp://user:pass@host/path                # used when type=rtsp
   rtsp_limit_seconds: 300
-  source_id: sequential_test_run2_test_load                     # identifier written to Postgres
+  source_id: sequential_test_run1                    # identifier written to Postgres
 
 pipeline:
 
   # model one config 
-  model1_path: models/yolov8m.pt           # first model (e.g. lightweight)
+  model1_path: models/yolov8m.pt           # first model - e.g., fine tuned for a specific use case
   model_name: "fine-tuned-car-model_v1"    # Allows us to track model versions
   model_type: "detection"                     
   model_mode: "detect"                     # Can pass modes like detect vs track as a parameter
@@ -22,7 +22,7 @@ pipeline:
 
  
   # model two config
-  model2_path: models/yolov8m.pt            # second model (e.g. standard)
+  model2_path: models/yolov8m.pt            # second model - e.g., tracking a separate but related use case vs  model #1
   model_name: "fine-tuned-people-model_v1"  
   model_type: "detection"
   model_mode: "detect"
