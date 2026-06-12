@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS vision_pipeline_benchmark_analytics (
+CREATE TABLE IF NOT EXISTS sequential_benchmark_analytics_data (
     id              BIGSERIAL       PRIMARY KEY,
     recorded_at     TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
     source_id       VARCHAR(128)    NOT NULL,

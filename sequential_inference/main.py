@@ -69,7 +69,7 @@ def main():
     pg_conninfo = (
         f"host={os.environ['PG_HOST']} "
         f"port={os.environ.get('PG_PORT', '5432')} "
-        f"dbname={pipeline_cfg.get('postgres_table')} "
+        f"dbname={pipeline_cfg.get('postgres_database')} "
         f"user={os.environ['VISION_PIPELINE_PG_USER']} "
         f"password={os.environ['VISION_PIPELINE_PG_PASSWORD']}"
     )

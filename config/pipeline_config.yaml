@@ -36,7 +36,8 @@ pipeline:
 
   # data saving config
   influx_db_measurement: "sequential-test1_telemetry"
-  postgres_table: "sequential_inference_analytics"
+  postgres_database: "vision_pipeline_benchmark_analytics"
+  postgres_table: "sequential_benchmark_analytics_data"
 
 video_config:
 
