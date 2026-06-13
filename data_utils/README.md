@@ -1,3 +1,3 @@
-## Data 
+## Data Utilities - W.I.P. 
 
-All data persistence, database and object storage related code will go here.
+All data persistence, database and object storage related code are stored here. 
