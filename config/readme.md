@@ -1,14 +1,14 @@
 ## Pipeline Configurations
 
-This folder contains sample configs you can use to run benchmarks. Currently, these config files are built around YOLO models from Ultralytics, but will be expanded to include more types in the future. 
+This folder contains sample config files for running the benchmark pipelines. The current configs are built around Ultralytics YOLO models, but support for additional model types may be added later. These benchmarks are designed to run in a production-style environment, so you will need supporting infrastructure such as InfluxDB and PostgreSQL before running them.
 
-Keep in mind that you'll need an InfluxDB and Postgres instance to run these benchmarks, these are "production style" benchmarks, so you'll need to have the broader infra in place that a production pipeline would depend on. 
+### Setting up the configs
 
+Use the following steps to prepare a config file:
 
-###  Setting up the Configs 
-1) Select the models you want to use, and either put them a "models" folder in the folder for the pipeline you're running, or in the case of an off the shelf model like YOLOv8, allow the pipeline to download them for you. 
-2) Input the class numbers and names 
-3) Set the queue sizes, timeouts and the like or use the default values
-4) Set the table ane measurement names 
-5) Set the hardware label to your GPU - *Note: only NVIDIA GPU are currently supported*
-
+1. Select the models you want to benchmark. Place local model weights in the appropriate `models` folder for the pipeline you are running, or use a supported off-the-shelf model such as YOLOv8 and allow the pipeline to download it.
+2. Enter the class numbers and class names for the two target classes you want to track.
+3. Set queue sizes, timeouts, and related pipeline parameters, or keep the default values if they fit your test.
+4. Set the PostgreSQL table name and InfluxDB measurement name used for reporting.
+5. Set the hardware label for the GPU being used. *Note: only NVIDIA GPUs are currently supported.*
+6. Set the `flush_interval` in the config file. This controls how often the pipeline writes aggregated benchmark data to InfluxDB and PostgreSQL.
