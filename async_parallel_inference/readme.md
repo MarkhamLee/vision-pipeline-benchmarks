@@ -6,6 +6,9 @@ This async pipeline variant is designed to reduce GPU idle time by separating fr
 
 ### High-Level Architecture and Workflow
 
+![High Level Architectre](../images/async_architecture_v1.png)
+
+
 1. A frame loader reads frames from the configured source and places each frame into a queue for both model workers.
 2. Independent model workers run inference on the same frame stream using their own configured model, class filter, and confidence threshold.
 3. An aggregator waits until both model results are available for a frame, combines the results, and updates the in-memory metrics used for reporting.
