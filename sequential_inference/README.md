@@ -18,4 +18,3 @@ This sequential pipeline variant is designed to benchmark two-model video infere
 
 1. General instructions are available [here](../docs/readme.md).
 2. Refer to the config [instructions](../config/readme.md) for details on setting up the config files to run a benchmark. The async and sequential pipelines use nearly identical configurations.
-
