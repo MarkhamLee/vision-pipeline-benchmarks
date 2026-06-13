@@ -3,7 +3,6 @@
 This repo contains benchmarking tools for use in optimizing multi-modal computer vision inference pipelines. You can try different approaches (sequential vs async), swap models in and out and get a report of how fast the pipeline ran.  The goal is to build a tool that makes pipeline benchmarking quick and easy. 
 
 
-
 For computer vision projects deployed at the edge the key constraints are often:
 * **Time:** You are monitoring real‑world events and need to deliver alerts or results to people who can react to emergencies and other issues detected by cameras. 
 * **Hardware:** You may be running on low‑power devices, or you need to run ML models on several video streams in parallel.
@@ -24,6 +23,7 @@ The tools in this repo are based on the approaches, "one off tools" and the like
     4) A Slack message at the end of the pipeline run with data including total duration, inferencing FPS and effective pipeline FPS.
 Since this is meant to simulate production pipelines, the benchmarks require the user to have an InfluxDB and PostgresSQL instance available to write data to. 
 
+You can find instructions on running the pipeline [here](/docs/readme.md).
 
 ### Infrastructure
 
