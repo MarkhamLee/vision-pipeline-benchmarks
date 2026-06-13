@@ -1,0 +1,1 @@
+Making sure that model folder exists when the repo is cloned to a new machine.
