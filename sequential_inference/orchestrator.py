@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
 from base_orchestrator import BaseOrchestrator  # noqa: E402
 from data_utils.data_clients import InfluxClient, PostgresClient  # noqa: E402
 from models.model_loader import CudaYoloLoader  # noqa: E402
+from report_creation.run_report_builder import RunReportBuilder  # noqa: E402
 from utils.logging_utils import console_logging  # noqa: E402
 from utils.pipeline_utils import send_slack_webhook_basic  # noqa: E402
 
@@ -40,6 +41,7 @@ class SequentialOrchestrator(BaseOrchestrator):
         self.slack_pipeline_completion_webhook = slack_webhook
         self.reports_dir = Path(reports_dir)
         self.reports_dir.mkdir(exist_ok=True)
+        self.report_builder = RunReportBuilder(self.reports_dir)
 
         pipeline_cfg = config.get('pipeline', {})
         source_cfg = config.get('source', {})
@@ -60,9 +62,10 @@ class SequentialOrchestrator(BaseOrchestrator):
         self.source_type = source_cfg.get('type', 'unknown')
         self.source_path = source_cfg.get('path', '')
         self.flush_interval_s = pipeline_cfg.get('flush_interval_seconds', 60)
-        self.influx_measurement = pipeline_cfg.\
-            get('influx_db_measurement',
-                'sequential_pipeline_telemetry')
+        self.influx_measurement = pipeline_cfg.get(
+            'influx_db_measurement',
+            'sequential_pipeline_telemetry'
+        )
         self.postgres_table = pipeline_cfg.get('postgres_table',
                                                'sequential_analytics_data')
 
@@ -120,14 +123,13 @@ class SequentialOrchestrator(BaseOrchestrator):
                 if interval['frame_latencies_ms']:
                     elapsed = time.monotonic() - interval['started_monotonic']
                     self._flush(interval, elapsed)
-                    interval = self._new_interval_state()
+                interval = self._new_interval_state()
                 self._finalize_video()
                 continue
 
-            if isinstance(item, dict) and item.get('event') == 'frame':
-                frame = item['frame']
-            else:
-                frame = item
+            frame = (item['frame']
+                     if isinstance(item, dict) and item.get('event') == 'frame'
+                     else item)
 
             t_frame_start = time.perf_counter()
 
@@ -196,11 +198,11 @@ class SequentialOrchestrator(BaseOrchestrator):
         run_wall_elapsed_s = time.perf_counter() - run_wall_start
         self._run_completed_at = time.strftime('%Y-%m-%d %H:%M:%S')
         summary = self._build_run_summary(run_wall_elapsed_s)
-        self._write_run_report(summary)
+        self.report_builder.write(summary)
 
         duration_min = round(run_wall_elapsed_s / 60, 2)
-        effective_inference_fps = round(summary["effective_inference_fps"], 2)
-        effective_pipeline_fps = round(summary["effective_pipeline_fps"], 2)
+        effective_inference_fps = round(summary['effective_inference_fps'], 3)
+        effective_pipeline_fps = round(summary['effective_pipeline_fps'], 3)
 
         completion_message = (
             f'Sequential pipeline with run ID: {self.source_id}, completed in '
@@ -210,13 +212,17 @@ class SequentialOrchestrator(BaseOrchestrator):
             f'hardware: {self.hardware_label}'
         )
         logger.info(completion_message)
-        send_slack_webhook_basic(
-            self.slack_pipeline_completion_webhook,
-            completion_message
-        )
+        try:
+            send_slack_webhook_basic(
+                self.slack_pipeline_completion_webhook,
+                completion_message
+            )
+        except Exception:
+            logger.exception('Slack completion notification failed')
         return summary
 
     def _new_interval_state(self) -> dict:
+        current = self._current_video or {}
         return {
             'started_monotonic': time.monotonic(),
             'frame_latencies_ms': [],
@@ -224,12 +230,12 @@ class SequentialOrchestrator(BaseOrchestrator):
             'model2_latencies_ms': [],
             'counts_m1': defaultdict(list),
             'counts_m2': defaultdict(list),
-            'video_path': self._current_video['video_path'] if self._current_video else None,  # noqa: E501
-            'video_name': self._current_video['video_name'] if self._current_video else None,  # noqa: E501
-            'video_fps': self._current_video['native_fps'] if self._current_video else None,  # noqa: E501
-            'video_width': self._current_video['width'] if self._current_video else None,  # noqa: E501
-            'video_height': self._current_video['height'] if self._current_video else None,  # noqa: E501
-            'video_duration_s': self._current_video['duration_s'] if self._current_video else None,  # noqa: E501
+            'video_path': current.get('video_path'),
+            'video_name': current.get('video_name'),
+            'video_fps': current.get('native_fps'),
+            'video_width': current.get('width'),
+            'video_height': current.get('height'),
+            'video_duration_s': current.get('duration_s'),
         }
 
     def _empty_aggregate(self) -> dict:
@@ -270,17 +276,19 @@ class SequentialOrchestrator(BaseOrchestrator):
             'wall_start': time.perf_counter(),
             'aggregate': self._empty_aggregate(),
         }
-        logger.info('Video started | %s | %sx%s | native_fps=%.3f',
-                    self._current_video['video_name'],
-                    self._current_video['width'],
-                    self._current_video['height'],
-                    self._current_video['native_fps'] or 0.0)
+        logger.info(
+            'Video started | %s | %sx%s | native_fps=%.3f',
+            self._current_video['video_name'],
+            self._current_video['width'],
+            self._current_video['height'],
+            self._current_video['native_fps'] or 0.0
+        )
 
     def _finalize_video(self) -> None:
         if self._current_video is None:
             return
-        wall_elapsed_s = time.\
-            perf_counter() - self._current_video['wall_start']
+        wall_elapsed_s = (time.perf_counter()
+                          - self._current_video['wall_start'])
         aggregate = deepcopy(self._current_video['aggregate'])
         frame_count = aggregate['frame_count']
         model1_latency_sum_ms = aggregate['model1_latency_sum_ms']
@@ -296,42 +304,55 @@ class SequentialOrchestrator(BaseOrchestrator):
             'frame_total': self._current_video['frame_total'],
             'duration_s': round(self._current_video['duration_s'] or 0.0, 3),
             'processed_frames': frame_count,
-            'avg_model1_latency_ms': self.
-            _safe_avg(model1_latency_sum_ms, frame_count),
-            'avg_model2_latency_ms': self.
-            _safe_avg(model2_latency_sum_ms, frame_count),
-            'avg_combined_inference_latency_ms': self.
-            _safe_avg(model1_latency_sum_ms + model2_latency_sum_ms,
-                      frame_count),
-            'avg_frame_latency_ms': self.
-            _safe_avg(aggregate['frame_latency_sum_ms'], frame_count),
-            'effective_inference_fps': round(frame_count / total_inference_time_s, 3) if total_inference_time_s > 0 else 0.0,  # noqa: E501
-            'effective_pipeline_fps': round(frame_count / wall_elapsed_s, 3) if wall_elapsed_s > 0 else 0.0,  # noqa: E501
-            'avg_model1_count': self._safe_avg(aggregate['model1_count_sum'], frame_count),  # noqa: E501
-            'avg_model2_count': self._safe_avg(aggregate['model2_count_sum'], frame_count),  # noqa: E501
+            'avg_model1_latency_ms': self._safe_avg(
+                model1_latency_sum_ms, frame_count),
+            'avg_model2_latency_ms': self._safe_avg(
+                model2_latency_sum_ms, frame_count),
+            'avg_combined_inference_latency_ms': self._safe_avg(
+                model1_latency_sum_ms + model2_latency_sum_ms, frame_count),
+            'avg_frame_latency_ms': self._safe_avg(
+                aggregate['frame_latency_sum_ms'], frame_count),
+            'effective_inference_fps': round(
+                frame_count / total_inference_time_s, 3)
+            if total_inference_time_s > 0 else 0.0,
+            'effective_pipeline_fps': round(
+                frame_count / wall_elapsed_s, 3)
+            if wall_elapsed_s > 0 else 0.0,
+            'avg_model1_count': self._safe_avg(
+                aggregate['model1_count_sum'], frame_count),
+            'avg_model2_count': self._safe_avg(
+                aggregate['model2_count_sum'], frame_count),
             'wall_elapsed_s': round(wall_elapsed_s, 3),
         }
         self._video_summaries.append(summary)
-        logger.info('Video completed | %s | frames=%d | infer_fps=%.2f | pipeline_fps=%.2f',  # noqa: E501
-                    summary['video_name'], summary['processed_frames'],
-                    summary['effective_inference_fps'], summary['effective_pipeline_fps'])  # noqa: E501
+        logger.info(
+            'Video completed | %s | frames=%d | infer_fps=%.3f | pipeline_fps=%.3f',  # noqa: E501
+            summary['video_name'],
+            summary['processed_frames'],
+            summary['effective_inference_fps'],
+            summary['effective_pipeline_fps'],
+        )
         self._current_video = None
 
     def _flush(self, interval: dict, elapsed_s: float) -> None:
         frame_count = len(interval['frame_latencies_ms'])
         avg_model1_latency_ms = self._avg(interval['model1_latencies_ms'])
         avg_model2_latency_ms = self._avg(interval['model2_latencies_ms'])
-        avg_combined_inference_latency_ms = round(avg_model1_latency_ms +
-                                                  avg_model2_latency_ms, 3)
+        avg_combined_inference_latency_ms = round(
+            avg_model1_latency_ms + avg_model2_latency_ms, 3)
         avg_frame_latency_ms = self._avg(interval['frame_latencies_ms'])
         avg_m1 = self._avg(interval['counts_m1'][self.model1_class_name])
         avg_m2 = self._avg(interval['counts_m2'][self.model2_class_name])
 
-        total_inference_time_s = (sum(interval['model1_latencies_ms'])
-                                  + sum(interval['model2_latencies_ms'])) / 1000  # noqa: E501
-        effective_inference_fps = frame_count / total_inference_time_s if total_inference_time_s > 0 else 0.0  # noqa: E501
-        effective_pipeline_fps = frame_count\
-            / elapsed_s if elapsed_s > 0 else 0.0
+        total_inference_time_s = (
+            sum(interval['model1_latencies_ms']) +
+            sum(interval['model2_latencies_ms'])
+        ) / 1000
+        effective_inference_fps = round(
+            frame_count / total_inference_time_s, 3)  \
+            if total_inference_time_s > 0 else 0.0
+        effective_pipeline_fps = round(
+            frame_count / elapsed_s, 3) if elapsed_s > 0 else 0.0
 
         t_write_start = time.perf_counter()
         influx_data = {
@@ -339,8 +360,8 @@ class SequentialOrchestrator(BaseOrchestrator):
             'avg_model2_latency_ms': avg_model2_latency_ms,
             'avg_combined_inference_latency_ms': avg_combined_inference_latency_ms,  # noqa: E501
             'avg_frame_latency_ms': avg_frame_latency_ms,
-            'effective_inference_fps': round(effective_inference_fps, 3),
-            'effective_pipeline_fps': round(effective_pipeline_fps, 3),
+            'effective_inference_fps': effective_inference_fps,
+            'effective_pipeline_fps': effective_pipeline_fps,
             'frame_count': frame_count,
             'video_native_fps': round(interval['video_fps'] or 0.0, 3)
             if interval['video_fps'] is not None else 0.0,
@@ -353,10 +374,8 @@ class SequentialOrchestrator(BaseOrchestrator):
         if interval['video_name']:
             influx_base['tags']['video_name'] = interval['video_name']
             influx_base['tags']['video_path'] = interval['video_path'] or ''
-        InfluxClient.write_influx_data(self.influx_client,
-                                       influx_base,
-                                       influx_data,
-                                       self.influx_bucket)
+        InfluxClient.write_influx_data(
+            self.influx_client, influx_base, influx_data, self.influx_bucket)
 
         PostgresClient.write_detection_data(
             table_name=self.postgres_table,
@@ -370,8 +389,9 @@ class SequentialOrchestrator(BaseOrchestrator):
         write_overhead_ms = (time.perf_counter() - t_write_start) * 1000
 
         logger.info(
-            'Flush | frames=%d | frame_latency=%.1fms | m1=%.1fms | m2=%.1fms | combined_infer=%.1fms | '  # noqa: E501
-            'infer_fps=%.2f | pipeline_fps=%.2f | video=%s | native_fps=%.2f | write_overhead=%.1fms',  # noqa: E501
+            'Flush | frames=%d | frame_latency=%.3fms | m1=%.3fms | m2=%.3fms | '  # noqa: E501
+            'combined_infer=%.3fms | infer_fps=%.3f | pipeline_fps=%.3f | '
+            'video=%s | native_fps=%.3f | write_overhead=%.3fms',
             frame_count,
             avg_frame_latency_ms,
             avg_model1_latency_ms,
@@ -406,81 +426,27 @@ class SequentialOrchestrator(BaseOrchestrator):
             'flush_interval_s': self.flush_interval_s,
             'total_frames': total_frames,
             'run_wall_elapsed_s': round(run_wall_elapsed_s, 3),
-            'effective_pipeline_fps': round(total_frames / run_wall_elapsed_s, 3) if run_wall_elapsed_s > 0 else 0.0,  # noqa: E501
-            'effective_inference_fps': round(total_frames / total_inference_time_s, 3) if total_inference_time_s > 0 else 0.0,  # noqa: E501
-            'avg_model1_latency_ms': self._safe_avg(self._run_totals['model1_latency_sum_ms'], total_frames),  # noqa: E501
-            'avg_model2_latency_ms': self._safe_avg(self._run_totals['model2_latency_sum_ms'], total_frames),  # noqa: E501
+            'effective_pipeline_fps': round(
+                total_frames / run_wall_elapsed_s, 3)
+            if run_wall_elapsed_s > 0 else 0.0,
+            'effective_inference_fps': round(
+                total_frames / total_inference_time_s, 3)
+            if total_inference_time_s > 0 else 0.0,
+            'avg_model1_latency_ms': self._safe_avg(
+                self._run_totals['model1_latency_sum_ms'], total_frames),
+            'avg_model2_latency_ms': self._safe_avg(
+                self._run_totals['model2_latency_sum_ms'], total_frames),
             'avg_combined_inference_latency_ms': self._safe_avg(
-                self._run_totals['model1_latency_sum_ms'] + self._run_totals['model2_latency_sum_ms'], total_frames  # noqa: E501
+                self._run_totals['model1_latency_sum_ms'] +
+                self._run_totals['model2_latency_sum_ms'],
+                total_frames
             ),
-            'avg_frame_latency_ms': self._safe_avg(self._run_totals['frame_latency_sum_ms'], total_frames),  # noqa: E501
+            'avg_frame_latency_ms': self._safe_avg(
+                self._run_totals['frame_latency_sum_ms'], total_frames),
             'run_started_at': self._run_started_at,
             'run_completed_at': self._run_completed_at,
             'videos': self._video_summaries,
         }
-
-    def _write_run_report(self, summary: dict) -> None:
-        timestamp = time.strftime('%Y%m%d_%H%M%S')
-        report_path = self.reports_dir / f'run_report_{self.source_id}_{timestamp}.md'  # noqa: E501
-        lines = [
-            f'# Sequential Run Report: {summary["source_id"]}',
-            '',
-            '## Run',
-            f'- Pipeline: {summary["pipeline"]}',
-            f'- Source ID: {summary["source_id"]}',
-            f'- Source type: {summary.get("source_type", "unknown")}',
-            f'- Source path: {summary.get("source_path", "")}',
-            f'- Hardware: {summary["hardware_label"]}',
-            f'- Site: {summary["site_label"]}',
-            f'- Started: {summary.get("run_started_at")}',
-            f'- Completed: {summary.get("run_completed_at")}',
-            '',
-            '## Models',
-            f'- Model 1: {summary.get("model1_name")} ({summary.get("model1_path")})',  # noqa: E501
-            f'- Model 2: {summary.get("model2_name")} ({summary.get("model2_path")})',  # noqa: E501
-            '',
-            '## Stores',
-            f'- Influx measurement: {summary.get("influx_measurement")}',
-            f'- PostgreSQL table: {summary.get("postgres_table")}',
-            '',
-            '## Overall Performance',
-            f'- Total frames: {summary["total_frames"]}',
-            f'- Run wall elapsed seconds: {summary["run_wall_elapsed_s"]}',
-            f'- Effective inference FPS: {summary.get("effective_inference_fps")}',  # noqa: E501
-            f'- Effective pipeline FPS: {summary.get("effective_pipeline_fps")}',  # noqa: E501
-            f'- Average model 1 latency ms: {summary.get("avg_model1_latency_ms")}',  # noqa: E501
-            f'- Average model 2 latency ms: {summary.get("avg_model2_latency_ms")}',  # noqa: E501
-            f'- Average combined inference latency ms: {summary.get("avg_combined_inference_latency_ms")}',  # noqa: E501
-            f'- Average frame latency ms: {summary.get("avg_frame_latency_ms")}',  # noqa: E501
-            '',
-        ]
-        if summary.get('videos'):
-            lines.extend(['## Per-Video Performance', ''])
-            for video in summary['videos']:
-                resolution = f"{video['width']}x{video['height']}" if video.get('width') and video.get('height') else 'unknown'  # noqa: E501
-                lines.extend([
-                    f"### {video['video_name']}",
-                    f"- Path: {video['video_path']}",
-                    f"- Duration seconds: {video['duration_s']}",
-                    f"- Native FPS: {video['native_fps']}",
-                    f"- Resolution: {resolution}",
-                    f"- Frames processed: {video['processed_frames']}",
-                    f"- Effective inference FPS: {video['effective_inference_fps']}",  # noqa: E501
-                    f"- Effective pipeline FPS: {video['effective_pipeline_fps']}",  # noqa: E501
-                    f"- Average model 1 latency ms: {video['avg_model1_latency_ms']}",  # noqa: E501
-                    f"- Average model 2 latency ms: {video['avg_model2_latency_ms']}",  # noqa: E501
-                    f"- Average combined inference latency ms: {video['avg_combined_inference_latency_ms']}",  # noqa: E501
-                    f"- Average frame latency ms: {video['avg_frame_latency_ms']}",  # noqa: E501
-                    '',
-                ])
-        lines.extend([
-            '## Notes',
-            '- Report summarizes run-level behavior plus per-video behavior for folder inputs.',  # noqa: E501
-            '- Config snapshots are stored as a separate YAML file in the reports folder',  # noqa: E501
-            '- Interval-level telemetry is available in InfluxDB.',
-        ])
-        report_path.write_text('\n'.join(lines), encoding='utf-8')
-        logger.info('Run report saved: %s', report_path)
 
     def get_metrics(self) -> dict:
         return {
