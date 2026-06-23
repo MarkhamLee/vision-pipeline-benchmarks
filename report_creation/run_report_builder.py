@@ -76,5 +76,5 @@ class RunReportBuilder:
             '- Interval-level telemetry is available in InfluxDB.',
         ])
 
-        report_path.write_text('\\n'.join(lines), encoding='utf-8')
+        report_path.write_text('\n'.join(lines), encoding='utf-8')
         return report_path
