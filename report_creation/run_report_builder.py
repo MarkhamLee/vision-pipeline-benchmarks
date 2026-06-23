@@ -48,18 +48,26 @@ class RunReportBuilder:
         if summary.get('videos'):
             lines.extend(['## Per-Video Performance', ''])
             for video in summary['videos']:
+
                 resolution = (
                     f"{video['width']}x{video['height']}"
                     if video.get('width') and video.get('height')
                     else 'unknown'
                 )
+
+                processing_to_source_ratio = round(video['wall_elapsed_s'] /
+                                                   video['duration_s'], 1) if\
+                    video['duration_s'] else 'N/A'
+
                 lines.extend([
                     f"### {video['video_name']}",
                     f"- Path: {video['video_path']}",
                     f"- Duration seconds: {video['duration_s']}",
+                    f"- Processing ratio (<1 = faster than real time): {processing_to_source_ratio}",  # noqa: E501
                     f"- Native FPS: {video['native_fps']}",
                     f"- Resolution: {resolution}",
                     f"- Frames processed: {video['processed_frames']}",
+                    f"- Video processing time seconds: {video['wall_elapsed_s']}",  # noqa: E501
                     f"- Effective inference FPS: {video['effective_inference_fps']}",  # noqa: E501
                     f"- Effective pipeline FPS: {video['effective_pipeline_fps']}",  # noqa: E501
                     f"- Average model 1 latency ms: {video['avg_model1_latency_ms']}",  # noqa: E501
@@ -71,6 +79,7 @@ class RunReportBuilder:
 
         lines.extend([
             '## Notes',
+            '- Processing ratio is a critical metric, <1 means the pipeline is processing videos faster than their native FPS.',  # noqa: E501
             '- Report summarizes run-level behavior plus per-video behavior for folder inputs.',  # noqa: E501
             '- Config snapshots are stored as a separate YAML file in the reports folder',  # noqa: E501
             '- Interval-level telemetry is available in InfluxDB.',
