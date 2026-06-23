@@ -62,7 +62,7 @@ class RunReportBuilder:
                 lines.extend([
                     f"### {video['video_name']}",
                     f"- Path: {video['video_path']}",
-                    f"- Duration seconds: {video['duration_s']}",
+                    f"- Source Video Duration(seconds): {video['duration_s']}",
                     f"- Processing ratio (<1 = faster than real time): {processing_to_source_ratio}",  # noqa: E501
                     f"- Native FPS: {video['native_fps']}",
                     f"- Resolution: {resolution}",
