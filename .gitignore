@@ -222,6 +222,8 @@ __marimo__/
 
 # Config files
 config/pipeline_config_prod.yaml
+config/pipeline_config_async_prod.yaml
+config/pipeline_config_hybrid_async_prod.yaml
 
 reports/*
 
