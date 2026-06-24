@@ -30,7 +30,7 @@ if sys.platform == 'win32':
 
 logger = console_logging('hybrid-async-entrypoint')
 
-CONFIG_PATH = REPO_ROOT / 'config' / 'pipeline_config_hybrid_async.yaml'
+CONFIG_PATH = REPO_ROOT / 'config' / 'pipeline_config_hybrid_async_prod.yaml'
 REPORTS_DIR = REPO_ROOT / 'reports'
 REQUIRED_ENV_VARS = (
     'VISION_PIPELINE_COMPLETION_WEBHOOK',

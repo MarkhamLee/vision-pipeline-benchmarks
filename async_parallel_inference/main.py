@@ -28,7 +28,7 @@ if sys.platform == 'win32':
 
 logger = console_logging('async-main')
 
-CONFIG_PATH = REPO_ROOT / 'config' / 'pipeline_config_async.yaml'
+CONFIG_PATH = REPO_ROOT / 'config' / 'pipeline_config_async_prod.yaml'
 REPORTS_DIR = REPO_ROOT / 'reports'
 REQUIRED_ENV_VARS = (
     'VISION_PIPELINE_COMPLETION_WEBHOOK',
