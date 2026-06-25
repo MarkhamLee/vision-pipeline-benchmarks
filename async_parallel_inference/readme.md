@@ -9,10 +9,12 @@ This async pipeline variant is designed to reduce GPU idle time by separating fr
 ![High Level Architectre](../images/async_architecture_v1.png)
 
 
-1. A frame loader reads frames from the configured source and places each frame into a queue for both model workers.
-2. Independent model workers run inference on the same frame stream using their own configured model, class filter, and confidence threshold.
-3. An aggregator waits until both model results are available for a frame, combines the results, and updates the in-memory metrics used for reporting.
-4. At the interval set in the config file, the pipeline flushes aggregated metrics to InfluxDB and PostgreSQL.
+1. A frame loader reads frames from the configured source and places each frame into a separate queue for each model. 
+2. Each model has its own independent worker that allows inference to be run on each frame in parallel.  
+3. The results aggregator collects and combines the inference outputs and telemetry data (e.g. latency) for each frame. 
+4. At the interval set in the config file, the pipeline writes aggregated metrics to the data stores: 
+    * Pipeline performance/telemetry data, e.g. inference latency, is written to InfluxDB 
+    * Model inference data, e.g., detected objects, is written to Postgres 
 5. At the end of the run, the pipeline logs completion details, reports overall run status, and saves the active config snapshot in the `reports` folder.
 
 ### How to Use
