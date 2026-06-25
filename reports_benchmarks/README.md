@@ -10,3 +10,6 @@ By using the same report builder for each pipeline, which requires the input dic
 
 Something to keep in mind: I generally build computer vision solutions for deployment at the edge, where space, power and economic constraints often restrict compute to something like an NVIDIA 4060. I.e., GPUs are available, but not ones that will heat a small room. As a result, these benchmarks will nearly always be on "lower" powered hardware as things like a NVIDIA 5090 aren't really feasible for edge deployments I tend to work on. 
 
+### Future Items
+* The source videos are fairly short and aren't in 4k as the benchmark pipelines are being fine tuned, reporting is being tweaked, etc., future tests will be done on 4k videos that are several minutes long.
+* Future tests will be done comparing several models and additional hardware beyond the current NVIDIA Mobile 4060
