@@ -1,7 +1,7 @@
 influxdb-client==1.49.0
 ultralytics==8.3.111
 requests==2.33.0
-torch==2.6.0+cu124
+torch==2.9.1+cu124
 numpy==2.1.1
 psycopg[binary]==3.3.4
 pydantic==2.13.4
